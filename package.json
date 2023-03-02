@@ -6,6 +6,7 @@
     "preview": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@nuxt/nitro": "^0.10.0",
     "@supabase/supabase-js": "^2.8.0",
     "bcrypt": "^5.1.0",
     "jose": "^4.13.0",

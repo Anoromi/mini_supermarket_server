@@ -1,5 +1,5 @@
 import { defineNitroConfig } from "nitropack";
 
 export default defineNitroConfig({
-  preset: 'vercel'
+  preset: 'vercel-edge'
 });
