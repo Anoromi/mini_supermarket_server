@@ -9,7 +9,6 @@
     "@supabase/supabase-js": "^2.8.0",
     "bcrypt": "^5.1.0",
     "jose": "^4.13.0",
-    "jsonwebtoken": "^9.0.0",
     "nitropack": "latest",
     "zod": "^3.20.6"
   },

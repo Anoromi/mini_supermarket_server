@@ -1,7 +1,5 @@
-// import { sign } from "jsonwebtoken";
 import { authDataSchema } from "../../utils/auth";
 import * as jose from "jose";
-// require('jsonwebtoken')
 import { clientError } from "../../utils/error";
 
 export default defineEventHandler(async (event) => {
@@ -18,11 +16,8 @@ export default defineEventHandler(async (event) => {
 
   if (uid.data === null) throw clientError("bad/user");
 
-  //  uid.data
-  // console.log(jwt);
   const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
-  // const token = jwt.sign({ uid: uid.data }, process.env.SUPABASE_JWT_SECRET!);
-  const token = await new jose.SignJWT({ uid })
+  const token = await new jose.SignJWT({ sub: uid.data })
     .setProtectedHeader({ alg: "HS256" })
     .sign(secret);
 

@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import config from "nitropack/dist/runtime/config";
 import { z } from "zod";
 
 export const authDataSchema = z.object({
