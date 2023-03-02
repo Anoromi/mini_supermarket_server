@@ -1,7 +1,7 @@
 import * as bcrypt from 'bcrypt';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { c as createError } from './vercel.mjs';
+import { c as createError } from './netlify.mjs';
 
 const authDataSchema = z.object({
   username: z.coerce.string(),

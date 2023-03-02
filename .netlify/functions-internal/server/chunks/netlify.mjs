@@ -1,10 +1,10 @@
 import 'node-fetch-native/polyfill';
-import { withoutTrailingSlash, parseURL, withoutBase, joinURL, parseQuery } from 'ufo';
+import { withoutTrailingSlash, withoutBase, joinURL, parseURL, withQuery } from 'ufo';
 import destr from 'destr';
+import { snakeCase } from 'scule';
 import { createFetch as createFetch$1, Headers } from 'ofetch';
 import { createCall, createFetch } from 'unenv/runtime/fetch/index';
 import { createHooks } from 'hookable';
-import { snakeCase } from 'scule';
 import { hash } from 'ohash';
 import { createStorage } from 'unstorage';
 
@@ -1138,6 +1138,54 @@ function deepFreeze(object) {
   return Object.freeze(object);
 }
 
+const config = useRuntimeConfig();
+const _routeRulesMatcher = toRouteMatcher(
+  createRouter$1({ routes: config.nitro.routeRules })
+);
+function createRouteRulesHandler() {
+  return eventHandler((event) => {
+    const routeRules = getRouteRules(event);
+    if (routeRules.headers) {
+      setHeaders(event, routeRules.headers);
+    }
+    if (routeRules.redirect) {
+      return sendRedirect(
+        event,
+        routeRules.redirect.to,
+        routeRules.redirect.statusCode
+      );
+    }
+    if (routeRules.proxy) {
+      let target = routeRules.proxy.to;
+      if (target.endsWith("/**")) {
+        let targetPath = event.path;
+        const strpBase = routeRules.proxy._proxyStripBase;
+        if (strpBase) {
+          targetPath = withoutBase(targetPath, strpBase);
+        }
+        target = joinURL(target.slice(0, -3), targetPath);
+      }
+      return proxyRequest(event, target, {
+        fetch: $fetch.raw,
+        ...routeRules.proxy
+      });
+    }
+  });
+}
+function getRouteRules(event) {
+  event.context._nitro = event.context._nitro || {};
+  if (!event.context._nitro.routeRules) {
+    const path = new URL(event.node.req.url, "http://localhost").pathname;
+    event.context._nitro.routeRules = getRouteRulesForPath(
+      withoutBase(path, useRuntimeConfig().app.baseURL)
+    );
+  }
+  return event.context._nitro.routeRules;
+}
+function getRouteRulesForPath(path) {
+  return defu({}, ..._routeRulesMatcher.matchAll(path).reverse());
+}
+
 const _assets = {
 
 };
@@ -1407,54 +1455,6 @@ function cloneWithProxy(obj, overrides) {
 }
 const cachedEventHandler = defineCachedEventHandler;
 
-const config = useRuntimeConfig();
-const _routeRulesMatcher = toRouteMatcher(
-  createRouter$1({ routes: config.nitro.routeRules })
-);
-function createRouteRulesHandler() {
-  return eventHandler((event) => {
-    const routeRules = getRouteRules(event);
-    if (routeRules.headers) {
-      setHeaders(event, routeRules.headers);
-    }
-    if (routeRules.redirect) {
-      return sendRedirect(
-        event,
-        routeRules.redirect.to,
-        routeRules.redirect.statusCode
-      );
-    }
-    if (routeRules.proxy) {
-      let target = routeRules.proxy.to;
-      if (target.endsWith("/**")) {
-        let targetPath = event.path;
-        const strpBase = routeRules.proxy._proxyStripBase;
-        if (strpBase) {
-          targetPath = withoutBase(targetPath, strpBase);
-        }
-        target = joinURL(target.slice(0, -3), targetPath);
-      }
-      return proxyRequest(event, target, {
-        fetch: $fetch.raw,
-        ...routeRules.proxy
-      });
-    }
-  });
-}
-function getRouteRules(event) {
-  event.context._nitro = event.context._nitro || {};
-  if (!event.context._nitro.routeRules) {
-    const path = new URL(event.node.req.url, "http://localhost").pathname;
-    event.context._nitro.routeRules = getRouteRulesForPath(
-      withoutBase(path, useRuntimeConfig().app.baseURL)
-    );
-  }
-  return event.context._nitro.routeRules;
-}
-function getRouteRulesForPath(path) {
-  return defu({}, ..._routeRulesMatcher.matchAll(path).reverse());
-}
-
 const plugins = [
   
 ];
@@ -1625,17 +1625,63 @@ function createNitroApp() {
 }
 const nitroApp = createNitroApp();
 
-const handler = toNodeListener(nitroApp.h3App);
-const vercel = (function(req, res) {
-  const query = req.headers["x-now-route-matches"];
-  if (query) {
-    const { url } = parseQuery(query);
-    if (url) {
-      req.url = url;
-    }
-  }
-  return handler(req, res);
-});
+async function lambda(event, context) {
+  const query = {
+    ...event.queryStringParameters,
+    ...event.multiValueQueryStringParameters
+  };
+  const url = withQuery(event.path, query);
+  const method = event.httpMethod || "get";
+  const r = await nitroApp.localCall({
+    event,
+    url,
+    context,
+    headers: normalizeIncomingHeaders(event.headers),
+    method,
+    query,
+    body: event.body
+    // TODO: handle event.isBase64Encoded
+  });
+  return {
+    statusCode: r.status,
+    headers: normalizeOutgoingHeaders(r.headers),
+    body: r.body.toString()
+  };
+}
+function normalizeIncomingHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers || {}).map(([key, value]) => [
+      key.toLowerCase(),
+      value
+    ])
+  );
+}
+function normalizeOutgoingHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [
+      k,
+      Array.isArray(v) ? v.join(",") : v
+    ])
+  );
+}
 
-export { createError as c, defineEventHandler as d, readBody as r, vercel as v };
-//# sourceMappingURL=vercel.mjs.map
+const handler = async function handler2(event, context) {
+  const query = {
+    ...event.queryStringParameters,
+    ...event.multiValueQueryStringParameters
+  };
+  const url = withQuery(event.path, query);
+  const routeRules = getRouteRulesForPath(url);
+  if (routeRules.cache && (routeRules.cache.swr || routeRules.cache.static)) {
+    const builder = await import('@netlify/functions').then(
+      (r) => r.builder || r.default.builder
+    );
+    const ttl = typeof routeRules.cache.swr === "number" ? routeRules.cache.swr : 60;
+    const swrHandler = routeRules.cache.swr ? (event2, context2) => lambda(event2, context2).then((r) => ({ ...r, ttl })) : lambda;
+    return builder(swrHandler)(event, context);
+  }
+  return lambda(event, context);
+};
+
+export { createError as c, defineEventHandler as d, handler as h, readBody as r };
+//# sourceMappingURL=netlify.mjs.map

@@ -1,13 +1,13 @@
-import { d as defineEventHandler, r as readBody } from './vercel.mjs';
+import { d as defineEventHandler, r as readBody } from './netlify.mjs';
 import { a as authDataSchema, c as clientError, h as hashPassword, s as supabase } from './error.mjs';
 import * as jose from 'jose';
 import 'node-fetch-native/polyfill';
 import 'ufo';
 import 'destr';
+import 'scule';
 import 'ofetch';
 import 'unenv/runtime/fetch/index';
 import 'hookable';
-import 'scule';
 import 'ohash';
 import 'unstorage';
 import 'bcrypt';

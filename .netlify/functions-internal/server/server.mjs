@@ -1,11 +1,11 @@
 globalThis._importMeta_={url:import.meta.url,env:process.env};import 'node-fetch-native/polyfill';
-export { v as default } from './chunks/vercel.mjs';
 import 'ufo';
+export { h as handler } from './chunks/netlify.mjs';
 import 'destr';
+import 'scule';
 import 'ofetch';
 import 'unenv/runtime/fetch/index';
 import 'hookable';
-import 'scule';
 import 'ohash';
 import 'unstorage';
-//# sourceMappingURL=index.mjs.map
+//# sourceMappingURL=server.mjs.map
