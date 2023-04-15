@@ -1,6 +1,4 @@
-import { authDataSchema } from "../../utils/auth";
 import * as jose from "jose";
-import { clientError } from "../../utils/error";
 
 export default defineEventHandler(async (event) => {
   console.log("body", await readBody(event));
@@ -14,10 +12,12 @@ export default defineEventHandler(async (event) => {
     p_password: await hashPassword(authData.data.password),
   });
 
-  if (uid.data === null) throw clientError("bad/user");
+
+  console.log('result', uid.data)
+  if (uid.data.sub === null) throw clientError("bad/user");
 
   const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
-  const token = await new jose.SignJWT({ sub: uid.data })
+  const token = await new jose.SignJWT({ ...uid.data })
     .setProtectedHeader({ alg: "HS256" })
     .sign(secret);
 

@@ -1,7 +1,7 @@
-import { clientError } from "../../utils/error";
 
 export default defineEventHandler(async (event) => {
   const authData = authDataSchema.safeParse(await readBody(event));
+  console.log(authData, await readBody(event));
   if (!authData.success) throw clientError("bad/data");
 
   console.log(authData.data);
